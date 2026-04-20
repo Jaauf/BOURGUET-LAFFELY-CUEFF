@@ -31,19 +31,19 @@ jobs:
 
       - name: Scan Docker Compose Configuration
         run: |
-          trivy config compose.yml
+          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL compose.yml
 
 
       - name: Scan Docker Compose Configuration
         run: |
           # Scanner tous les fichiers YAML du répertoire
-          trivy config --format table .
+          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL --format table .
 
       - name: Scan Images in Docker Compose
         run: |
-          trivy image node:24
-          trivy image postgres
-          trivy image nginx:alpine
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL node:24
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL postgres
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL nginx:alpine
 
       - name: Build Docker Image (if needed)
         run: |
