@@ -33,6 +33,12 @@ jobs:
         run: |
           trivy config compose.yml
 
+
+      - name: Scan Docker Compose Configuration
+        run: |
+          # Scanner tous les fichiers YAML du répertoire
+          trivy config --format table .
+
       - name: Scan Images in Docker Compose
         run: |
           trivy image node:24
