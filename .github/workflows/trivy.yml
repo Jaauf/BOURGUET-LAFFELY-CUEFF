@@ -1,39 +1,47 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: trivy
+name: Trivy Scan (Docker Compose + Images)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ "main" ]
+    branches: ["main"]
   schedule:
-    - cron: '44 3 * * 3'
+    - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
 
 permissions:
   contents: read
+  security-events: write
+  actions: read
 
 jobs:
-  build:
-    permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
-    name: Build
+  trivy-scan:
+    name: Scan Docker Compose and Images
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build an image from Dockerfile
+      - name: Install Trivy
         run: |
-          docker build -t docker.io/my-organization/my-app:${{ github.sha }} .
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
 
-      - name: Run Trivy vulnerability scanner
+      - name: Scan Docker Compose Configuration
+        run: |
+          trivy config compose.yml
+
+      - name: Scan Images in Docker Compose
+        run: |
+          trivy compose --exit-code 0 --severity CRITICAL,HIGH compose.yml
+
+      - name: Build Docker Image (if needed)
+        run: |
+          docker compose -f compose.yml build
+
+      - name: Scan Built Images with Trivy
         uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
         with:
           image-ref: 'docker.io/my-organization/my-app:${{ github.sha }}'
@@ -42,7 +50,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      - name: Upload Trivy SARIF Results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
