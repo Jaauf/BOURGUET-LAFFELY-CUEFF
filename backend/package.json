@@ -13,6 +13,8 @@
   "dependencies": {
     "cy2": "^4.0.9",
     "express": "^5.2.1",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "brace-expansion": "^5.0.5", 
+    "picomatch": "^4.0.4"          
   }
 }
