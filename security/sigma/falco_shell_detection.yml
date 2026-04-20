@@ -1,0 +1,29 @@
+title: Shell exécuté dans un conteneur backend via Falco
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+status: stable
+description: >
+  Détecte l'ouverture d'un shell (bash, sh, ash, zsh) à l'intérieur
+  du conteneur backend Node.js, ce qui peut indiquer une exploitation RCE.
+author: Security Team
+date: 2026-04-20
+logsource:
+  product: falco
+  service: alerts
+detection:
+  selection:
+    rule: "Shell spawned in backend container"
+    priority: "CRITICAL"
+  condition: selection
+fields:
+  - container.name
+  - proc.name
+  - proc.cmdline
+  - user.name
+falsepositives:
+  - Debugging manuel par un administrateur
+  - Scripts de healthcheck mal configurés
+level: critical
+tags:
+  - attack.execution
+  - attack.t1059
+  - attack.t1059.004

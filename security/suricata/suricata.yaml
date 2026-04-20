@@ -1,0 +1,54 @@
+%YAML 1.1
+---
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,172.16.0.0/12,10.0.0.0/8]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+
+af-packet:
+  - interface: eth0
+    threads: 1
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+
+default-log-dir: /var/log/suricata/
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            http: yes
+        - http:
+            extended: yes
+
+logging:
+  default-log-level: notice
+  outputs:
+    - console:
+        enabled: no
+    - file:
+        enabled: yes
+        level: info
+        filename: /var/log/suricata/suricata.log
+
+rule-files:
+  - /etc/suricata/rules/local.rules
+
+app-layer:
+  protocols:
+    http:
+      enabled: yes
+
+threading:
+  set-cpu-affinity: no
+  cpu-affinity:
+    - management-cpu-set:
+        cpu: [0]
+  detect-thread-ratio: 1.0

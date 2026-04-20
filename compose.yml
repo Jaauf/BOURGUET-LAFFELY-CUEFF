@@ -1,34 +1,125 @@
+networks:
+  app-network:
+    driver: bridge
+  traefik-public:
+    driver: bridge
+
 services:
-  db:
-    image: postgres
+
+  # ── Reverse proxy ────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik-public"
+      - "--entrypoints.web.address=:80"
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      - "--log.level=INFO"
     ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: securepa$$word
-      POSTGRES_DB: test
+      - "80:80"
     volumes:
-      - ./database/pgdata:/var/lib/postgresql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "traefik-logs:/var/log/traefik"
+    networks:
+      - traefik-public
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true
+
+  # ── Base de données ───────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./database/pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "5432"
 
+  # ── Backend API ───────────────────────────────────────────────────────────
   api:
     build: ./backend
-    ports:
-      - "3000:3000"
+    container_name: api
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: securepa$$word
-      POSTGRES_DB: test
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
+      - traefik-public
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.api.middlewares=api-strip"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "1.0"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
+  # ── Frontend ──────────────────────────────────────────────────────────────
   web:
     build: ./frontend
-    ports:
-      - "80:80"
+    container_name: web
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`localhost`)"
+      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.services.web.loadbalancer.server.port=8080"
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.25"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  traefik-logs:

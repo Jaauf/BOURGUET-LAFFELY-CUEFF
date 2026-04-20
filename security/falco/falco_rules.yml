@@ -1,0 +1,11 @@
+- rule: Shell spawned in backend container
+  desc: Alerte si un shell est exécuté dans le conteneur backend
+  condition: >
+    spawned_process and
+    container.name = "api" and
+    proc.name in (shell_binaries)
+  output: >
+    ALERTE shell détecté dans le backend
+    (user=%user.name cmd=%proc.cmdline container=%container.name image=%container.image.repository)
+  priority: CRITICAL
+  tags: [shell, backend, rce]

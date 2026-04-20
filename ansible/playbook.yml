@@ -1,0 +1,94 @@
+---
+- name: Déploiement complet de la stack sécurisée
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    project_dir: "/Open-source-M2-cyber-2026"
+
+  tasks:
+
+    # ── Prérequis : Docker ───────────────────────────────────────────────
+    - name: Vérifier si Docker est installé
+      command: docker --version
+      register: docker_check
+      ignore_errors: true
+
+    - name: Installer Docker si absent
+      when: docker_check.rc != 0
+      block:
+        - name: Télécharger le script d'installation Docker
+          get_url:
+            url: https://get.docker.com
+            dest: /tmp/get-docker.sh
+            mode: '0755'
+        - name: Exécuter le script d'installation Docker
+          command: sh /tmp/get-docker.sh
+
+    - name: Vérifier si Docker Compose est disponible
+      command: docker compose version
+      register: compose_check
+      ignore_errors: true
+
+    - name: Installer le plugin Docker Compose si absent
+      when: compose_check.rc != 0
+      apt:
+        name: docker-compose-plugin
+        state: present
+        update_cache: true
+
+    # ── Git : cloner ou mettre à jour le repo ───────────────────────────
+    - name: Vérifier si le repo existe déjà
+      stat:
+        path: "{{ project_dir }}/.git"
+      register: repo_stat
+
+    - name: Cloner le dépôt si absent
+      when: not repo_stat.stat.exists
+      git:
+        repo: "https://github.com/ynov-cd/Open-source-M2-cyber-2026"
+        dest: "{{ project_dir }}"
+        version: main
+
+    - name: Mettre à jour le dépôt si présent
+      when: repo_stat.stat.exists
+      command:
+        cmd: git pull
+        chdir: "{{ project_dir }}"
+
+    # ── Déploiement stack applicative ───────────────────────────────────
+    - name: Démarrer la stack applicative
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        files:
+          - compose.yml
+        state: present
+        pull: missing
+
+    - name: Attendre que Traefik soit healthy
+      command: docker inspect --format="{{ '{{.State.Health.Status}}' }}" traefik
+      register: traefik_health
+      until: traefik_health.stdout == "healthy" or traefik_health.stdout == "running"
+      retries: 10
+      delay: 5
+
+    # ── Déploiement stack sécurité ───────────────────────────────────────
+    - name: Démarrer la stack de sécurité
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}/security"
+        files:
+          - docker-compose.security.yml
+        state: present
+        pull: missing
+
+    # ── Vérification finale ──────────────────────────────────────────────
+    - name: Lister tous les conteneurs en cours
+      command: docker compose ps
+      args:
+        chdir: "{{ project_dir }}"
+      register: containers_status
+
+    - name: Afficher le statut des conteneurs
+      debug:
+        msg: "{{ containers_status.stdout }}"
