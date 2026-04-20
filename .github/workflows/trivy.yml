@@ -35,7 +35,7 @@ jobs:
 
       - name: Scan Images in Docker Compose
         run: |
-          trivy compose --exit-code 0 --severity CRITICAL,HIGH compose.yml
+          trivy compose.yml --severity CRITICAL,HIGH compose.yml
 
       - name: Build Docker Image (if needed)
         run: |
