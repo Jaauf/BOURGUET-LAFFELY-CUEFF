@@ -35,7 +35,9 @@ jobs:
 
       - name: Scan Images in Docker Compose
         run: |
-          trivy compose.yml --severity CRITICAL,HIGH compose.yml
+          trivy image node:24
+          trivy image postgres
+          trivy image nginx:alpine
 
       - name: Build Docker Image (if needed)
         run: |
