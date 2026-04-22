@@ -128,7 +128,7 @@ yara security/yara/malicious_node.yar backend/
  
 | Job | Outil | Objectif |
 |-----|-------|----------|
-| `npm-audit` | npm audit | Vulnérabilités des dépendances package.json |
+| `npm-audit` | npm audit | Vulnérabilités des dépendances package.json -> Réalise par dependency bot externalisé de nos propre github actions |
 | `license-check` | license-checker | Blocage des licences copyleft fort |
 | `sbom` | CycloneDX + Trivy | Génération et analyse du SBOM applicatif |
 | `trivy-image` | Trivy | Scan des images Docker + SBOM image |
