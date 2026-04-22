@@ -33,7 +33,9 @@ jobs:
           pwd
           ls -la
           ls -la backend/
-          
+      - name: Deplacing to node directory
+        run: cd backend
+        
       - name: Install dependencies
         run: npm install
 
