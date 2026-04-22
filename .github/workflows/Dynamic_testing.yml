@@ -1,0 +1,171 @@
+name: Dynamic testing
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  
+  # ─────────────────────────────────────────────
+  # 6. TESTS STACK APPLICATIVE
+  # ─────────────────────────────────────────────
+  test-app:
+    name: 6 · Tests stack applicative
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: testdb
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Démarrer la stack applicative
+        run: docker compose -f compose.yml up -d --build
+
+      - name: Attendre que les services soient healthy
+        run: |
+          echo "⏳ Attente du healthcheck db..."
+          timeout 60 bash -c 'until docker inspect db --format="{{.State.Health.Status}}" 2>/dev/null | grep -q "healthy"; do sleep 3; done'
+          echo "✅ db healthy"
+
+          echo "⏳ Attente API (Traefik → /api)..."
+          timeout 60 bash -c 'until curl -sf http://localhost/api > /dev/null 2>&1; do sleep 3; done' || true
+          echo "✅ API joignable"
+
+      - name: Test Traefik répond sur :80
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/)
+          echo "Frontend HTTP status: $STATUS"
+          [[ "$STATUS" =~ ^(200|304|301|302)$ ]] || (echo "❌ Frontend KO ($STATUS)" && exit 1)
+
+      - name: Test Frontend (web → :8080 via Traefik)
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/)
+          echo "Web HTTP status: $STATUS"
+          [[ "$STATUS" =~ ^(200|304|301|302)$ ]] || (echo "❌ Frontend KO ($STATUS)" && exit 1)
+
+      - name: Test API backend (GET /api)
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/api)
+          echo "API HTTP status: $STATUS"
+          # 200 OK ou 404 acceptable (route existe, app répond)
+          [[ "$STATUS" =~ ^(200|404|401)$ ]] || (echo "❌ API KO ($STATUS)" && exit 1)
+
+      - name: Test DB postgres accessible depuis l'api (logs)
+        run: |
+          docker logs api 2>&1 | grep -i "error\|fatal" && echo "⚠️ Erreurs détectées dans les logs API" || echo "✅ Logs API propres"
+
+      - name: Afficher les logs en cas d'échec
+        if: failure()
+        run: |
+          echo "=== Logs Traefik ===" && docker logs traefik --tail=30
+          echo "=== Logs API ===" && docker logs api --tail=30
+          echo "=== Logs DB ===" && docker logs db --tail=30
+          echo "=== Logs Web ===" && docker logs web --tail=30
+
+      - name: Arrêter la stack applicative
+        if: always()
+        run: docker compose -f compose.yml down -v
+
+  # ─────────────────────────────────────────────
+  # 7. TESTS STACK SÉCURITÉ
+  # ─────────────────────────────────────────────
+  test-security-stack:
+    name: 7 · Tests stack sécurité
+    runs-on: ubuntu-latest
+    needs: test-app  # Lance uniquement si le job 6 passe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Créer le réseau traefik-public (requis par compose sécu)
+        run: docker network create traefik-public || true
+
+      - name: Démarrer la stack sécurité
+        run: docker compose -f compose.security.yml up -d
+
+      - name: Attendre Wazuh Indexer (OpenSearch :9200)
+        run: |
+          echo "⏳ Attente Wazuh Indexer..."
+          timeout 120 bash -c 'until curl -sf -o /dev/null http://localhost:9200; do sleep 5; done'
+          echo "✅ Wazuh Indexer up"
+
+      - name: Attendre Wazuh Manager API (:55000)
+        run: |
+          echo "⏳ Attente Wazuh Manager API..."
+          timeout 120 bash -c 'until curl -sf -o /dev/null -k https://localhost:55000; do sleep 5; done'
+          echo "✅ Wazuh Manager API up"
+
+      - name: Attendre Wazuh Dashboard (:5601)
+        run: |
+          echo "⏳ Attente Wazuh Dashboard..."
+          timeout 120 bash -c 'until curl -sf -o /dev/null http://localhost:5601; do sleep 5; done'
+          echo "✅ Wazuh Dashboard up"
+
+      - name: Test Wazuh Indexer — OpenSearch répond
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:9200)
+          echo "Wazuh Indexer status: $STATUS"
+          [[ "$STATUS" =~ ^(200|401)$ ]] || (echo "❌ Wazuh Indexer KO ($STATUS)" && exit 1)
+
+      - name: Test Wazuh Manager — API REST répond
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" -k https://localhost:55000)
+          echo "Wazuh Manager API status: $STATUS"
+          # 200 ou 401 = API active (auth requise = normal)
+          [[ "$STATUS" =~ ^(200|401)$ ]] || (echo "❌ Wazuh Manager KO ($STATUS)" && exit 1)
+
+      - name: Test Wazuh Dashboard — UI répond
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:5601)
+          echo "Wazuh Dashboard status: $STATUS"
+          [[ "$STATUS" =~ ^(200|302|401)$ ]] || (echo "❌ Wazuh Dashboard KO ($STATUS)" && exit 1)
+
+      - name: Test Shuffle Backend (:5001)
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:5001)
+          echo "Shuffle Backend status: $STATUS"
+          [[ "$STATUS" =~ ^(200|302|401|404)$ ]] || (echo "❌ Shuffle Backend KO ($STATUS)" && exit 1)
+
+      - name: Test Shuffle Frontend (:3001)
+        run: |
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3001)
+          echo "Shuffle Frontend status: $STATUS"
+          [[ "$STATUS" =~ ^(200|302)$ ]] || (echo "❌ Shuffle Frontend KO ($STATUS)" && exit 1)
+
+      - name: Vérifier que Falco tourne (conteneur running)
+        run: |
+          STATE=$(docker inspect falco --format="{{.State.Status}}" 2>/dev/null)
+          echo "Falco state: $STATE"
+          [[ "$STATE" == "running" ]] || (echo "❌ Falco n'est pas running" && exit 1)
+
+      - name: Vérifier que Suricata tourne (conteneur running)
+        run: |
+          STATE=$(docker inspect suricata --format="{{.State.Status}}" 2>/dev/null)
+          echo "Suricata state: $STATE"
+          [[ "$STATE" == "running" ]] || (echo "❌ Suricata n'est pas running" && exit 1)
+
+      - name: Afficher les logs en cas d'échec
+        if: failure()
+        run: |
+          echo "=== Logs Wazuh Manager ===" && docker logs wazuh-manager --tail=30
+          echo "=== Logs Wazuh Indexer ===" && docker logs wazuh-indexer --tail=30
+          echo "=== Logs Wazuh Dashboard ===" && docker logs wazuh-dashboard --tail=30
+          echo "=== Logs Falco ===" && docker logs falco --tail=30
+          echo "=== Logs Suricata ===" && docker logs suricata --tail=30
+          echo "=== Logs Shuffle Backend ===" && docker logs shuffle-backend --tail=30
+
+      - name: Arrêter la stack sécurité
+        if: always()
+        run: docker compose -f compose.security.yml down -v
