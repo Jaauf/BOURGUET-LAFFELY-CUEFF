@@ -54,6 +54,7 @@ jobs:
       - name: quick fix
         run: npm audit fix
         working-directory: backend/
+        continue-on-error: true
         
       - name: hard fix with breaking change
         run: npm audit fix --force
