@@ -38,6 +38,7 @@ jobs:
         
       - name: Install dependencies
         run: npm install
+        working-directory: backend/
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
         run: npm audit --audit-level=high
