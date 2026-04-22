@@ -1,0 +1,234 @@
+name: Security Scan (SBOM + Vulns + Licenses + IaC)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. SCAN DÉPENDANCES APPLICATIVES (npm audit)
+  # ─────────────────────────────────────────────
+  npm-audit:
+    name: 1 · Vulnérabilités npm (package.json)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (bloque sur HIGH/CRITICAL)
+        run: npm audit --audit-level=high
+
+  # ─────────────────────────────────────────────
+  # 2. VÉRIFICATION DES LICENCES COPYLEFT
+  # ─────────────────────────────────────────────
+  license-check:
+    name: 2 · Vérification des licences
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Vérifier licences (bloquer copyleft fort)
+        # Licences copyleft fort bloquées : GPL-2.0, GPL-3.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
+        run: |
+          license-checker --onlyAllow \
+            'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;CC0-1.0;CC-BY-3.0;CC-BY-4.0;Unlicense;0BSD;Python-2.0' \
+            --excludePrivatePackages \
+            --summary
+
+  # ─────────────────────────────────────────────
+  # 3. GÉNÉRATION & ANALYSE DU SBOM (CycloneDX)
+  # ─────────────────────────────────────────────
+  sbom:
+    name: 3 · SBOM CycloneDX + scan Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Installer @cyclonedx/cyclonedx-npm
+        run: npm install -g @cyclonedx/cyclonedx-npm
+
+      - name: Générer le SBOM au format CycloneDX JSON
+        run: cyclonedx-npm --output-format json --output-file sbom.json
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
+
+      - name: Installer Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Analyser le SBOM avec Trivy (vulnérabilités)
+        run: |
+          trivy sbom \
+            --exit-code 1 \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --format table \
+            sbom.json
+
+      - name: Analyser le SBOM avec Trivy (SARIF)
+        if: always()
+        run: |
+          trivy sbom \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-sbom.sarif \
+            sbom.json
+
+      - name: Upload SARIF SBOM
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-sbom.sarif
+          category: sbom
+
+  # ─────────────────────────────────────────────
+  # 4. SCAN IMAGE DOCKER + SBOM IMAGE
+  # ─────────────────────────────────────────────
+  trivy-image:
+    name: 4 · Scan images Docker + SBOM image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Installer Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Build de l'image applicative
+        run: docker compose -f compose.yml build
+
+      - name: Scan vulnérabilités images de base
+        run: |
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL node:24
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL postgres
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL nginx:alpine
+
+      - name: Générer SBOM CycloneDX de l'image applicative (Trivy)
+        run: |
+          trivy image \
+            --format cyclonedx \
+            --output sbom-image.json \
+            --severity MEDIUM,HIGH,CRITICAL \
+            $(docker compose -f compose.yml config --images | head -1)
+
+      - name: Upload SBOM image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-image-cyclonedx
+          path: sbom-image.json
+
+      - name: Scan SARIF images (upload GitHub Security)
+        if: always()
+        run: |
+          trivy image \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-image.sarif \
+            node:24
+        continue-on-error: true
+
+      - name: Upload SARIF image
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: docker-image
+
+  # ─────────────────────────────────────────────
+  # 5. ANALYSE IaC (Trivy config)
+  # ─────────────────────────────────────────────
+  iac-scan:
+    name: 5 · Analyse IaC (Docker Compose + YAML)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Installer Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Scan IaC compose.yml
+        run: |
+          trivy config \
+            --exit-code 1 \
+            --severity MEDIUM,HIGH,CRITICAL \
+            compose.yml
+
+      - name: Scan IaC répertoire complet
+        run: |
+          trivy config \
+            --exit-code 1 \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --format table \
+            .
+
+      - name: Scan IaC SARIF (upload GitHub Security)
+        if: always()
+        run: |
+          trivy config \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-iac.sarif \
+            .
+
+      - name: Upload SARIF IaC
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-iac.sarif
+          category: iac
