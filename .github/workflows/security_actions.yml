@@ -39,8 +39,26 @@ jobs:
         working-directory: backend/
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
-        run: npm audit --audit-level=high
+        run: | 
+          npm audit --audit-level=high --json > audit-report.json
+          cat audit-report.json
         working-directory: backend/
+        
+      - name: Upload audit report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: backend/audit-report.json
+          retention-days: 30  # Optionnel : conserve l'artefact pendant 30 jours
+
+      - name: quick fix
+        run: npm audit fix
+        working-directory: backend/
+        
+      - name: hard fix with breaking change
+        run: npm audit fix --force
+        working-directory: backend/
+        if: github.event_name == 'workflow_dispatch'
 
   # ─────────────────────────────────────────────
   # 2. VÉRIFICATION DES LICENCES COPYLEFT
