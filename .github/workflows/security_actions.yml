@@ -28,10 +28,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Debug - Lister les fichiers
+        run: |
+          pwd
+          ls -la
+          ls -la backend/
       
       - name: Install dependencies
         run: npm ci
-        working-directory: /backend
+        working-directory: /usr/bin/bash/backend
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
         run: npm audit --audit-level=high
