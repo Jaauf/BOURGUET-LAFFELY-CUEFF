@@ -98,7 +98,7 @@ jobs:
             --exit-code 1 \
             --severity MEDIUM,HIGH,CRITICAL \
             --format table \
-            sbom.json
+            backend/sbom.json
 
       - name: Analyser le SBOM avec Trivy (SARIF)
         if: always()
@@ -107,7 +107,7 @@ jobs:
             --severity MEDIUM,HIGH,CRITICAL \
             --format sarif \
             --output trivy-sbom.sarif \
-            sbom.json
+            backend/sbom.json
 
       - name: Upload SARIF SBOM
         if: always()
