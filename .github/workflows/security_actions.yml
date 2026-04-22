@@ -36,11 +36,11 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-        working-directory: /usr/bin/bash/backend
+        working-directory: backend
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
         run: npm audit --audit-level=high
-        working-directory: ./backend
+        working-directory: backend
 
   # ─────────────────────────────────────────────
   # 2. VÉRIFICATION DES LICENCES COPYLEFT
