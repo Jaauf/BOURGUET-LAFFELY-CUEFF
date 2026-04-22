@@ -3,7 +3,7 @@
 ## Architecture
 compose.yml               → Stack applicative (traefik, api, web, db)
 security/docker-compose.security.yml → Stack sécurité (falco, suricata, wazuh, shuffle)
-.github/workflows/security.yml       → Pipeline CI/CD sécurisé
+.github/workflows/security_actions       → Pipeline CI/CD sécurisé
 ansible/playbook.yml                 → Déploiement automatisé
 security/falco/        → Règles Falco
 security/suricata/     → Config + règles Suricata
@@ -121,3 +121,42 @@ trivy image open-source-m2-cyber-2026-api
 # Lancer YARA sur le code backend
 yara security/yara/malicious_node.yar backend/
 ```
+
+
+
+## Structure du pipeline
+ 
+| Job | Outil | Objectif |
+|-----|-------|----------|
+| `npm-audit` | npm audit | Vulnérabilités des dépendances package.json |
+| `license-check` | license-checker | Blocage des licences copyleft fort |
+| `sbom` | CycloneDX + Trivy | Génération et analyse du SBOM applicatif |
+| `trivy-image` | Trivy | Scan des images Docker + SBOM image |
+| `iac-scan` | Trivy config | Mauvaises pratiques IaC (Docker Compose, YAML) |
+
+
+## Choix techniques
+ 
+**npm audit plutôt que Snyk/Dependabot** : natif Node.js, aucune dépendance externe, résultat immédiat sans token.
+ 
+**CycloneDX npm** (`@cyclonedx/cyclonedx-npm`) : standard SBOM reconnu, compatible avec l'écosystème Trivy pour l'analyse downstream.
+ 
+**license-checker avec liste d'allowlist** : plus fiable que les blocklists — on autorise explicitement les licences permissives, tout le reste est bloqué. Les licences copyleft fort bloquées sont : GPL-2.0, GPL-3.0, AGPL-3.0, LGPL-*.
+ 
+**SARIF uploadé sur GitHub Security** : centralise tous les résultats dans l'onglet "Security > Code scanning" du repo sans outil tiers.
+ 
+**Jobs séparés** : l'échec d'un scan n'empêche pas les autres de tourner, ce qui donne une vue complète des problèmes.
+
+
+
+ ## Artefacts générés par le pipeline
+ 
+| Fichier | Contenu |
+|---------|---------|
+| `sbom.json` | SBOM CycloneDX des dépendances npm |
+| `sbom-image.json` | SBOM CycloneDX de l'image Docker buildée |
+| `trivy-sbom.sarif` | Résultats SBOM au format SARIF |
+| `trivy-image.sarif` | Résultats scan image au format SARIF |
+| `trivy-iac.sarif` | Résultats IaC au format SARIF |
+ 
+Les SARIF sont visibles dans **GitHub > Security > Code scanning alerts**.
