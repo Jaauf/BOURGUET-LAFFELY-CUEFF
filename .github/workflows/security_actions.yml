@@ -33,8 +33,6 @@ jobs:
           pwd
           ls -la
           ls -la backend/
-      - name: Deplacing to node directory
-        run: cd backend
         
       - name: Install dependencies
         run: npm install
@@ -42,6 +40,7 @@ jobs:
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
         run: npm audit --audit-level=high
+        working-directory: backend/
 
   # ─────────────────────────────────────────────
   # 2. VÉRIFICATION DES LICENCES COPYLEFT
