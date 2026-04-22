@@ -36,13 +36,9 @@ jobs:
           
       - name: Install dependencies
         run: npm install
-      
-      - name: Install dependencies
-        run: npm ci
 
       - name: npm audit (bloque sur HIGH/CRITICAL)
         run: npm audit --audit-level=high
-        working-directory: backend
 
   # ─────────────────────────────────────────────
   # 2. VÉRIFICATION DES LICENCES COPYLEFT
@@ -62,9 +58,6 @@ jobs:
       - name: Install dependencies
         run: npm install
         
-      - name: Install dependencies
-        run: npm ci
-
       - name: Install license-checker
         run: npm install -g license-checker
 
@@ -93,9 +86,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        
-      - name: Install dependencies
-        run: npm ci
 
       - name: Installer @cyclonedx/cyclonedx-npm
         run: npm install -g @cyclonedx/cyclonedx-npm
