@@ -200,13 +200,6 @@ services:
           memory: 256m
           cpus: "0.5"
 
-  shuffle-database:
-    image: fjogeleit/http-request-action:latest
-    container_name: shuffle-database
-    restart: unless-stopped
-    networks:
-      - security-net
-
 volumes:
   falco-logs:
   suricata-logs:
