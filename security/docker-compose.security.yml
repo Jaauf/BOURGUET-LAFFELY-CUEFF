@@ -108,7 +108,7 @@ services:
     restart: unless-stopped
     hostname: wazuh-indexer
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m"
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
       - bootstrap.memory_lock=true
     ulimits:
       memlock:
@@ -126,7 +126,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 1g
           cpus: "1.0"
 
   # ── Wazuh Dashboard ───────────────────────────────────────────────────────
