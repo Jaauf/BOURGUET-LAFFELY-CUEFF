@@ -166,3 +166,14 @@ Les SARIF sont visibles dans **GitHub > Security > Code scanning alerts**.
 https://www.cisecurity.org/benchmark/docker
 Utilisation de la version 1.6.0 avec trivy car les versions plus récente ne sont pas encore implementer. (manque de temps)
 
+
+## Vulnérabilitées trouvées grace au pipeline
+
+![trivy scan](trivy-scanning-image.png)
+
+
+![copy-left](preuve-copyleft-fort.png)
+
+
+![dependency bot](preuve-Dependency-bot-.png)
+
