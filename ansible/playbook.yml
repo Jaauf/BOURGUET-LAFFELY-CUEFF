@@ -82,6 +82,52 @@
         state: present
         pull: missing
 
+    # ── Initialisation sécurité OpenSearch ──────────────────────────────
+    - name: Attendre que wazuh-indexer soit disponible (port 9200)
+      wait_for:
+        host: localhost
+        port: 9200
+        timeout: 120
+        delay: 10
+
+    - name: Initialiser la sécurité OpenSearch via securityadmin.sh
+      command: >
+        docker exec wazuh-indexer bash -c
+        "export JAVA_HOME=/usr/share/wazuh-indexer/jdk &&
+        export PATH=$JAVA_HOME/bin:$PATH &&
+        bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh
+        -cd /usr/share/wazuh-indexer/opensearch-security/
+        -icl -p 9200
+        -cacert /usr/share/wazuh-indexer/certs/root-ca.pem
+        -cert /usr/share/wazuh-indexer/certs/admin.pem
+        -key /usr/share/wazuh-indexer/certs/admin-key.pem
+        -nhnv"
+      register: securityadmin_result
+      retries: 5
+      delay: 15
+      until: securityadmin_result.rc == 0
+
+    - name: Afficher la sortie de securityadmin.sh
+      debug:
+        msg: "{{ securityadmin_result.stdout_lines }}"
+
+    - name: Vérifier que la sécurité OpenSearch est initialisée
+      uri:
+        url: "https://localhost:9200/_cluster/health"
+        method: GET
+        user: admin
+        password: admin
+        validate_certs: false
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+
+    - name: Afficher le statut du cluster OpenSearch
+      debug:
+        msg: "Cluster OpenSearch status : {{ health_check.json.status }}"
+
     # ── Vérification finale ──────────────────────────────────────────────
     - name: Lister tous les conteneurs en cours
       command: docker compose ps
