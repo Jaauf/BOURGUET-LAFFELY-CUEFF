@@ -42,8 +42,7 @@ jobs:
       - name: Scan Security Docker Compose Configuration
         run: |
           # Scanner tous les fichiers YAML du répertoire
-          trivy security --exit-code 1 --severity MEDIUM,HIGH,CRITICAL --format table .
-
+          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL security/docker-compose.security.yml
 
       - name: Scan Images in Applicatif Docker Compose
         run: |
