@@ -2,26 +2,29 @@ networks:
   app-network:
     driver: bridge
   traefik-public:
+    name: app_traefik-public
     driver: bridge
 
 services:
 
   # ── Reverse proxy ────────────────────────────────────────────────────────
   traefik:
-    image: traefik:v3.2
+    image: traefik:v2.11
     container_name: traefik
     restart: unless-stopped
     command:
-      - "--api.insecure=false"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik-public"
+      - "--providers.docker.network=app_traefik-public"
       - "--entrypoints.web.address=:80"
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
       - "--log.level=INFO"
     ports:
       - "8888:80"
+      - "8880:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "traefik-logs:/var/log/traefik"
@@ -104,6 +107,8 @@ services:
     build: ./frontend
     container_name: web
     restart: unless-stopped
+    healthcheck:
+      disable: true
     networks:
       - traefik-public
     expose:
