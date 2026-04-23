@@ -57,14 +57,14 @@ jobs:
 
       - name: Scan Images in Security Docker Compose
         run: |
-          trivy image --compliance docker-cis-1.6.0 falco-no-driver:latest
-          trivy image --compliance docker-cis-1.6.0 suricata:latest
-          trivy image --compliance docker-cis-1.6.0 wazuh-manager:4.7.3
-          trivy image --compliance docker-cis-1.6.0 wazuh-indexer:4.7.3
-          trivy image --compliance docker-cis-1.6.0 wazuh-dashboard:4.7.3
-          trivy image --compliance docker-cis-1.6.0 shuffle-frontend:latest
-          trivy image --compliance docker-cis-1.6.0 shuffle-backend:latest
-          trivy image --compliance docker-cis-1.6.0 http-request-action:latest
+          trivy image --compliance docker-cis-1.6.0 falcosecurity/falco-no-driver:latest
+          trivy image --compliance docker-cis-1.6.0 jasonish/suricata:latest
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-manager:4.7.3
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-indexer:4.7.3
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-dashboard:4.7.3
+          trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-frontend:latest
+          trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-backend:latest
+          trivy image --compliance docker-cis-1.6.0 fjogeleit/http-request-action:latest
 
   
 
