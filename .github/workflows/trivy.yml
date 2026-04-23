@@ -29,6 +29,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
+      - name:  Scan all files         
+        run: | 
+          trivy fs --scanners vuln,secret,misconfig .
+
+
       - name: Scan Docker Compose Configuration
         run: |
           trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL compose.yml
@@ -61,8 +66,8 @@ jobs:
           trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL shuffle-backend:latest
           trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL http-request-action:latest
 
+  
 
-          
 
       # - name: Build Docker Image (if needed)
       #   run: |
