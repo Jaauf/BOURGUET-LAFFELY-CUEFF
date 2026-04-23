@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  role_name: traefik
+  author: BOURGUET-LAFFELY-CUEFF
+  description: Déploiement idempotent du reverse-proxy Traefik via Docker Compose
+  min_ansible_version: "2.14"
+dependencies:
+  - role: docker
+  - role: git

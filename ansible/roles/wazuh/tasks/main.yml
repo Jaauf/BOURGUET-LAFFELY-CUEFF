@@ -1,0 +1,70 @@
+---
+# roles/wazuh/tasks/main.yml
+
+# ── Prérequis kernel pour Wazuh (OpenSearch) ─────────────────────────────────
+# OpenSearch (moteur de Wazuh Dashboard) requiert vm.max_map_count >= 262144
+- name: wazuh | Configurer vm.max_map_count (requis par OpenSearch)
+  ansible.posix.sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/99-wazuh.conf   # fichier dédié, non /etc/sysctl.conf
+  tags: wazuh
+
+# ── Vérification du répertoire Compose ───────────────────────────────────────
+- name: wazuh | Vérifier la présence du répertoire Wazuh
+  ansible.builtin.stat:
+    path: "{{ wazuh_compose_dir }}"
+  register: _wazuh_dir_stat
+  tags: wazuh
+
+- name: wazuh | Vérifier la présence du fichier Compose Wazuh
+  ansible.builtin.stat:
+    path: "{{ wazuh_compose_dir }}/{{ wazuh_compose_file }}"
+  register: _wazuh_compose_stat
+  tags: wazuh
+
+- name: wazuh | Avertissement si le fichier Compose est absent
+  ansible.builtin.debug:
+    msg: >-
+      AVERTISSEMENT : {{ wazuh_compose_dir }}/{{ wazuh_compose_file }} introuvable.
+      Déploiement Wazuh ignoré. Vérifiez la structure du dépôt.
+  when: not _wazuh_compose_stat.stat.exists
+  tags: wazuh
+
+# ── Déploiement ───────────────────────────────────────────────────────────────
+- name: wazuh | Démarrer la stack Wazuh (SIEM)
+  community.docker.docker_compose_v2:
+    project_src: "{{ wazuh_compose_dir }}"
+    files: "{{ wazuh_compose_files }}"
+    state: present
+    pull: missing
+    remove_orphans: false
+  when: _wazuh_compose_stat.stat.exists
+  register: _wazuh_stack
+  tags: wazuh
+
+# ── Attente démarrage ─────────────────────────────────────────────────────────
+# Wazuh manager prend ~60-90s à initialiser complètement
+- name: wazuh | Attendre que wazuh-manager soit opérationnel
+  community.docker.docker_container_info:
+    name: "{{ wazuh_container_name }}"
+  register: _wazuh_info
+  until: >-
+    (_wazuh_info.container.State.Health.Status | default('running'))
+    in wazuh_healthy_states
+    or _wazuh_info.container.State.Status == 'running'
+  retries: "{{ wazuh_startup_retries | int }}"
+  delay: "{{ wazuh_startup_delay | int }}"
+  when: _wazuh_compose_stat.stat.exists
+  tags: wazuh
+
+- name: wazuh | Statut final
+  ansible.builtin.debug:
+    msg: >-
+      wazuh-manager →
+      status={{ _wazuh_info.container.State.Status | default('non déployé') }}
+      health={{ _wazuh_info.container.State.Health.Status | default('N/A') }}
+  when: _wazuh_compose_stat.stat.exists
+  tags: wazuh

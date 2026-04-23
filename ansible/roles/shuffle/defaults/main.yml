@@ -1,0 +1,12 @@
+---
+# roles/shuffle/defaults/main.yml
+
+shuffle_compose_files:
+  - "{{ shuffle_compose_file }}"
+
+shuffle_health_retries: "{{ docker_healthcheck_retries }}"
+shuffle_health_delay: "{{ docker_healthcheck_delay }}"
+
+shuffle_healthy_states:
+  - healthy
+  - running

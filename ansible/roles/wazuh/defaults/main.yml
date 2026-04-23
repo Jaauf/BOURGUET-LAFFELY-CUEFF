@@ -1,0 +1,16 @@
+---
+# roles/wazuh/defaults/main.yml
+
+wazuh_compose_files:
+  - "{{ wazuh_compose_file }}"
+
+wazuh_health_retries: "{{ docker_healthcheck_retries }}"
+wazuh_health_delay: "{{ docker_healthcheck_delay }}"
+
+# Wazuh démarre lentement — on attend plus longtemps
+wazuh_startup_retries: 20
+wazuh_startup_delay: 10
+
+wazuh_healthy_states:
+  - healthy
+  - running

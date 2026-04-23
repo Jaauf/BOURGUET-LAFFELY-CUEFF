@@ -1,0 +1,49 @@
+---
+# =============================================================================
+# Variables globales — group_vars/all.yml
+# Toutes les valeurs configurables du projet centralisées ici
+# =============================================================================
+
+# ── Projet Git ───────────────────────────────────────────────────────────────
+project_name: "BOURGUET-LAFFELY-CUEFF"
+project_dir: "/opt/{{ project_name }}"
+repo_url: "https://github.com/Jaauf/BOURGUET-LAFFELY-CUEFF"
+repo_branch: "main"
+
+# ── Réseau Docker partagé ─────────────────────────────────────────────────────
+docker_shared_network: "proxy"
+
+# ── Traefik ──────────────────────────────────────────────────────────────────
+traefik_container_name: "traefik"
+traefik_http_port: "80"
+traefik_https_port: "443"
+traefik_dashboard_port: "8080"
+traefik_compose_file: "compose.yml"
+
+# ── Wazuh ─────────────────────────────────────────────────────────────────────
+wazuh_container_name: "wazuh-manager"
+wazuh_compose_dir: "{{ project_dir }}/security/wazuh"
+wazuh_compose_file: "docker-compose.wazuh.yml"
+wazuh_dashboard_port: "443"
+wazuh_api_port: "55000"
+wazuh_agent_port: "1514"
+
+# ── Shuffle ───────────────────────────────────────────────────────────────────
+shuffle_container_name: "shuffle-frontend"
+shuffle_compose_dir: "{{ project_dir }}/security/shuffle"
+shuffle_compose_file: "docker-compose.shuffle.yml"
+shuffle_port: "3001"
+
+# ── Stack sécurité globale ────────────────────────────────────────────────────
+security_stack_compose_dir: "{{ project_dir }}/security"
+security_stack_compose_file: "docker-compose.security.yml"
+
+# ── Liste des conteneurs à vérifier en post_tasks ─────────────────────────────
+deploy_containers_to_check:
+  - "{{ traefik_container_name }}"
+  - "{{ wazuh_container_name }}"
+  - "{{ shuffle_container_name }}"
+
+# ── Timeouts Docker ───────────────────────────────────────────────────────────
+docker_healthcheck_retries: 15
+docker_healthcheck_delay: 6

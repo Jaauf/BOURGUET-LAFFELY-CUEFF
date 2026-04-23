@@ -1,0 +1,15 @@
+---
+# roles/traefik/defaults/main.yml
+
+traefik_compose_src: "{{ project_dir }}"
+traefik_compose_files:
+  - "{{ traefik_compose_file }}"
+
+# Timeout santé Traefik
+traefik_health_retries: "{{ docker_healthcheck_retries }}"
+traefik_health_delay: "{{ docker_healthcheck_delay }}"
+
+# États attendus (healthy = avec HEALTHCHECK, running = sans)
+traefik_healthy_states:
+  - healthy
+  - running

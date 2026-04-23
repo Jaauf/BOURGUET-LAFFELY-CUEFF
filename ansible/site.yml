@@ -1,0 +1,66 @@
+---
+# =============================================================================
+# BOURGUET-LAFFELY-CUEFF — Stack Sécurisée
+# Point d'entrée principal
+# Usage : ansible-playbook site.yml --ask-become-pass
+# =============================================================================
+
+- name: Déploiement de la stack sécurisée complète
+  hosts: deploy_target
+  become: true
+
+  pre_tasks:
+    - name: Vérifier la compatibilité OS (Debian/Ubuntu uniquement)
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: >-
+          OS non supporté : {{ ansible_distribution }} {{ ansible_distribution_version }}.
+          Ce playbook requiert une distribution Debian ou Ubuntu.
+        success_msg: "✔ OS compatible : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      tags: always
+
+    - name: Mise à jour du cache APT
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      tags: always
+
+  roles:
+    - role: docker          # Installation Docker Engine + Compose plugin
+      tags: [docker, prerequisites]
+
+    - role: git             # Clonage / mise à jour du dépôt projet
+      tags: [git, clone]
+
+    - role: traefik         # Déploiement du reverse-proxy Traefik
+      tags: [traefik, network]
+
+    - role: wazuh           # Déploiement de la stack SIEM Wazuh
+      tags: [wazuh, security, siem]
+
+    - role: shuffle         # Déploiement du SOAR Shuffle
+      tags: [shuffle, security, soar]
+
+    - role: security_stack  # Déploiement de la stack sécurité globale
+      tags: [security_stack, security]
+
+  post_tasks:
+    - name: "══ Vérification finale — conteneurs actifs ══"
+      community.docker.docker_container_info:
+        name: "{{ item }}"
+      loop: "{{ deploy_containers_to_check }}"
+      register: containers_info
+      ignore_errors: true
+      tags: always
+
+    - name: Afficher le résumé des conteneurs
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item }} →
+          {{ item.container.State.Status | default('non trouvé') }}
+          ({{ item.container.State.Health.Status | default('no healthcheck') }})
+      loop: "{{ containers_info.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags: always

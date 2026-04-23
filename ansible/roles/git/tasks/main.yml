@@ -1,0 +1,39 @@
+---
+# roles/git/tasks/main.yml
+
+- name: git | Installer git
+  ansible.builtin.apt:
+    name: "{{ git_packages }}"
+    state: present
+  tags: git
+
+- name: git | Créer le répertoire parent du projet
+  ansible.builtin.file:
+    path: "{{ project_dir | dirname }}"
+    state: directory
+    mode: "0755"
+  tags: git
+
+# Le module ansible.builtin.git est idempotent :
+# - Si le repo n'existe pas → clone
+# - Si le repo existe et est à jour → no change
+# - Si le repo existe et est en retard → pull automatique
+- name: git | Cloner ou mettre à jour le dépôt '{{ repo_url }}'
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ project_dir }}"
+    version: "{{ repo_branch }}"
+    update: true
+    force: "{{ git_force_update }}"
+    depth: "{{ git_clone_depth | int if git_clone_depth > 0 else omit }}"
+  register: git_result
+  tags: git
+
+- name: git | Afficher le statut du dépôt
+  ansible.builtin.debug:
+    msg: >-
+      {{ git_result.changed | ternary(
+        'Dépôt mis à jour → commit ' + (git_result.after | default('N/A')),
+        'Dépôt déjà à jour (commit : ' + (git_result.after | default('N/A')) + ')'
+      ) }}
+  tags: git

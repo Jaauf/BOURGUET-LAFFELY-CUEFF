@@ -1,0 +1,8 @@
+---
+# roles/security_stack/defaults/main.yml
+
+security_stack_compose_files:
+  - "{{ security_stack_compose_file }}"
+
+security_stack_health_retries: "{{ docker_healthcheck_retries }}"
+security_stack_health_delay: "{{ docker_healthcheck_delay }}"

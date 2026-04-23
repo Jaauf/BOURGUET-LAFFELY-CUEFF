@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  role_name: git
+  author: BOURGUET-LAFFELY-CUEFF
+  description: Clonage et mise à jour idempotente du dépôt Git projet
+  min_ansible_version: "2.14"
+dependencies: []

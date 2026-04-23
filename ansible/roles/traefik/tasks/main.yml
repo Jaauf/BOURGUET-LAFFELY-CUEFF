@@ -1,0 +1,49 @@
+---
+# roles/traefik/tasks/main.yml
+
+- name: traefik | Vérifier la présence du fichier Compose
+  ansible.builtin.stat:
+    path: "{{ traefik_compose_src }}/{{ traefik_compose_file }}"
+  register: _traefik_compose_stat
+  tags: traefik
+
+- name: traefik | Échec si compose.yml introuvable
+  ansible.builtin.fail:
+    msg: >-
+      Fichier Compose introuvable :
+      {{ traefik_compose_src }}/{{ traefik_compose_file }}
+      Vérifiez que le rôle 'git' a bien cloné le dépôt.
+  when: not _traefik_compose_stat.stat.exists
+  tags: traefik
+
+# community.docker.docker_compose_v2 est idempotent :
+# recrée uniquement les conteneurs dont la config a changé
+- name: traefik | Démarrer la stack applicative (Traefik + services)
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_compose_src }}"
+    files: "{{ traefik_compose_files }}"
+    state: present
+    pull: missing          # Pull l'image seulement si absente localement
+    remove_orphans: false
+  register: _traefik_stack
+  tags: traefik
+
+- name: traefik | Attendre que le conteneur Traefik soit opérationnel
+  community.docker.docker_container_info:
+    name: "{{ traefik_container_name }}"
+  register: _traefik_info
+  until: >-
+    (_traefik_info.container.State.Health.Status | default('running'))
+    in traefik_healthy_states
+    or _traefik_info.container.State.Status == 'running'
+  retries: "{{ traefik_health_retries | int }}"
+  delay: "{{ traefik_health_delay | int }}"
+  tags: traefik
+
+- name: traefik | Statut final
+  ansible.builtin.debug:
+    msg: >-
+      Traefik →
+      status={{ _traefik_info.container.State.Status }}
+      health={{ _traefik_info.container.State.Health.Status | default('N/A') }}
+  tags: traefik

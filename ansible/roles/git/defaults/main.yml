@@ -1,0 +1,12 @@
+---
+# roles/git/defaults/main.yml
+
+git_packages:
+  - git
+  - curl
+
+# Profondeur du clone (0 = historique complet)
+git_clone_depth: 0
+
+# Forcer la mise à jour même si le repo a des modifications locales
+git_force_update: false

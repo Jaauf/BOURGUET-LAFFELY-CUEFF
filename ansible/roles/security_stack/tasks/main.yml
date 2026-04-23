@@ -1,0 +1,57 @@
+---
+# roles/security_stack/tasks/main.yml
+# Déploie le docker-compose.security.yml global (services transverses :
+# ClamAV, Fail2ban, Suricata, etc., selon ce que contient le repo)
+
+# ── Vérification des fichiers ─────────────────────────────────────────────────
+- name: security_stack | Vérifier la présence du répertoire security/
+  ansible.builtin.stat:
+    path: "{{ security_stack_compose_dir }}"
+  register: _sec_dir_stat
+  tags: security_stack
+
+- name: security_stack | Vérifier la présence du fichier Compose
+  ansible.builtin.stat:
+    path: "{{ security_stack_compose_dir }}/{{ security_stack_compose_file }}"
+  register: _sec_compose_stat
+  tags: security_stack
+
+- name: security_stack | Avertissement si le fichier Compose est absent
+  ansible.builtin.debug:
+    msg: >-
+      AVERTISSEMENT : {{ security_stack_compose_dir }}/{{ security_stack_compose_file }}
+      introuvable. Stack sécurité globale ignorée.
+  when: not _sec_compose_stat.stat.exists
+  tags: security_stack
+
+# ── Déploiement ───────────────────────────────────────────────────────────────
+- name: security_stack | Démarrer la stack sécurité globale
+  community.docker.docker_compose_v2:
+    project_src: "{{ security_stack_compose_dir }}"
+    files: "{{ security_stack_compose_files }}"
+    state: present
+    pull: missing
+    remove_orphans: false
+  when: _sec_compose_stat.stat.exists
+  register: _sec_stack
+  tags: security_stack
+
+# ── Résumé des services déployés ──────────────────────────────────────────────
+- name: security_stack | Lister les conteneurs du projet sécurité
+  ansible.builtin.command:
+    cmd: >-
+      docker compose
+      -f {{ security_stack_compose_dir }}/{{ security_stack_compose_file }}
+      ps --format json
+  register: _sec_ps
+  changed_when: false
+  when: _sec_compose_stat.stat.exists
+  tags: security_stack
+
+- name: security_stack | Afficher les services actifs
+  ansible.builtin.debug:
+    msg: "{{ _sec_ps.stdout_lines }}"
+  when:
+    - _sec_compose_stat.stat.exists
+    - _sec_ps.stdout_lines | length > 0
+  tags: security_stack

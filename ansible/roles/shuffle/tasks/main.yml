@@ -1,0 +1,68 @@
+---
+# roles/shuffle/tasks/main.yml
+
+# ── Vérification du répertoire Compose ───────────────────────────────────────
+- name: shuffle | Vérifier la présence du répertoire Shuffle
+  ansible.builtin.stat:
+    path: "{{ shuffle_compose_dir }}"
+  register: _shuffle_dir_stat
+  tags: shuffle
+
+- name: shuffle | Vérifier la présence du fichier Compose Shuffle
+  ansible.builtin.stat:
+    path: "{{ shuffle_compose_dir }}/{{ shuffle_compose_file }}"
+  register: _shuffle_compose_stat
+  tags: shuffle
+
+- name: shuffle | Avertissement si le fichier Compose est absent
+  ansible.builtin.debug:
+    msg: >-
+      AVERTISSEMENT : {{ shuffle_compose_dir }}/{{ shuffle_compose_file }} introuvable.
+      Déploiement Shuffle ignoré. Vérifiez la structure du dépôt.
+  when: not _shuffle_compose_stat.stat.exists
+  tags: shuffle
+
+# ── Prérequis kernel pour OpenDistro (moteur Shuffle) ────────────────────────
+- name: shuffle | Configurer vm.max_map_count (requis par OpenSearch/Opensearch)
+  ansible.posix.sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/99-shuffle.conf
+  tags: shuffle
+
+# ── Déploiement ───────────────────────────────────────────────────────────────
+- name: shuffle | Démarrer la stack Shuffle (SOAR)
+  community.docker.docker_compose_v2:
+    project_src: "{{ shuffle_compose_dir }}"
+    files: "{{ shuffle_compose_files }}"
+    state: present
+    pull: missing
+    remove_orphans: false
+  when: _shuffle_compose_stat.stat.exists
+  register: _shuffle_stack
+  tags: shuffle
+
+# ── Attente démarrage ─────────────────────────────────────────────────────────
+- name: shuffle | Attendre que shuffle-frontend soit opérationnel
+  community.docker.docker_container_info:
+    name: "{{ shuffle_container_name }}"
+  register: _shuffle_info
+  until: >-
+    (_shuffle_info.container.State.Health.Status | default('running'))
+    in shuffle_healthy_states
+    or _shuffle_info.container.State.Status == 'running'
+  retries: "{{ shuffle_health_retries | int }}"
+  delay: "{{ shuffle_health_delay | int }}"
+  when: _shuffle_compose_stat.stat.exists
+  tags: shuffle
+
+- name: shuffle | Statut final
+  ansible.builtin.debug:
+    msg: >-
+      shuffle-frontend →
+      status={{ _shuffle_info.container.State.Status | default('non déployé') }}
+      health={{ _shuffle_info.container.State.Health.Status | default('N/A') }}
+  when: _shuffle_compose_stat.stat.exists
+  tags: shuffle
