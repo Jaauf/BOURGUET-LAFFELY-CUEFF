@@ -28,9 +28,6 @@ services:
       /usr/bin/falco
       --pidfile=/var/run/falco.pid
       -pk
-      --json-output
-      --log-level=info
-      -o "json_output=true"
       -o "log_syslog=false"
       -o "file_output.enabled=true"
       -o "file_output.filename=/var/log/falco/falco.log"
