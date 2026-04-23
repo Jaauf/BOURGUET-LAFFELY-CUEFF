@@ -1,7 +1,7 @@
 FROM nginx:1.27-alpine AS runtime
 
 # ❌ MISCONFIGURATION AJOUTÉE : ADD d'une archive distante non vérifiée
-ADD https://example.com/malicious-archive.tar.gz /tmp/
+#ADD https://example.com/malicious-archive.tar.gz /tmp/
 
 # Remplacer la config globale (contient pid, events, http)
 COPY nginx.conf /etc/nginx/nginx.conf
