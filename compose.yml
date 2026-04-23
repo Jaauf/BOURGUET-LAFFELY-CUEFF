@@ -21,7 +21,7 @@ services:
       - "--accesslog.filepath=/var/log/traefik/access.log"
       - "--log.level=INFO"
     ports:
-      - "80:80"
+      - "8888:80"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "traefik-logs:/var/log/traefik"
