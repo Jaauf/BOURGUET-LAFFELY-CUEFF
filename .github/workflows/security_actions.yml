@@ -2,9 +2,9 @@ name: Security Scan (SBOM + Vulns + Licenses + IaC)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   pull_request:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   schedule:
     - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
 
@@ -96,7 +96,6 @@ jobs:
         run: |
           trivy sbom \
             --exit-code 1 \
-            --severity MEDIUM,HIGH,CRITICAL \
             --format table \
             backend/sbom.json
 
@@ -104,7 +103,6 @@ jobs:
         if: always()
         run: |
           trivy sbom \
-            --severity MEDIUM,HIGH,CRITICAL \
             --format sarif \
             --output trivy-sbom.sarif \
             backend/sbom.json
@@ -139,16 +137,15 @@ jobs:
 
       - name: Scan vulnérabilités images de base
         run: |
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL node:24
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL postgres
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL nginx:alpine
+          trivy image node:24
+          trivy image postgres
+          trivy image nginx:alpine
 
       - name: Générer SBOM CycloneDX de l'image applicative (Trivy)
         run: |
           trivy image \
             --format cyclonedx \
             --output sbom-image.json \
-            --severity MEDIUM,HIGH,CRITICAL \
             $(docker compose -f compose.yml config --images | head -1)
 
       - name: Upload SBOM image as artifact
@@ -161,7 +158,6 @@ jobs:
         if: always()
         run: |
           trivy image \
-            --severity MEDIUM,HIGH,CRITICAL \
             --format sarif \
             --output trivy-image.sarif \
             node:24

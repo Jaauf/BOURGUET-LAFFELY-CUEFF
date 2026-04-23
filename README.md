@@ -160,3 +160,9 @@ yara security/yara/malicious_node.yar backend/
 | `trivy-iac.sarif` | Résultats IaC au format SARIF |
  
 Les SARIF sont visibles dans **GitHub > Security > Code scanning alerts**.
+
+## Référence utilisé pour la compliance
+
+https://www.cisecurity.org/benchmark/docker
+Utilisation de la version 1.6.0 avec trivy car les versions plus récente ne sont pas encore implementer. (manque de temps)
+

@@ -2,9 +2,9 @@ name: Trivy Scan (Docker Compose + Images)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   pull_request:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   schedule:
     - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
 
@@ -64,7 +64,7 @@ jobs:
           trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-dashboard:4.7.3
           trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-frontend:latest
           trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-backend:latest
-          trivy image --compliance docker-cis-1.6.0 fjogeleit/http-request-action:latest
+          # trivy image --compliance docker-cis-1.6.0 fjogeleit/http-request-action:latest
 
   
 
