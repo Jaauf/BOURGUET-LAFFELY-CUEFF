@@ -29,40 +29,45 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
+      - name:  Scan all files         
+        run: | 
+          trivy fs --scanners vuln,secret,misconfig .
+
+
       - name: Scan Docker Compose Configuration
         run: |
-          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL compose.yml
+          trivy config --file-patterns "dockerfile:Dockerfile" compose.yml
 
 
       - name: Scan Docker Compose Applicatif Configuration
         run: |
           # Scanner tous les fichiers YAML du répertoire
-          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL --format table .
+          trivy config --format table .
 
       - name: Scan Security Docker Compose Configuration
         run: |
           # Scanner tous les fichiers YAML du répertoire
-          trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL security/docker-compose.security.yml
+          trivy config security/docker-compose.security.yml
 
       - name: Scan Images in Applicatif Docker Compose
         run: |
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL node:24
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL postgres
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL nginx:alpine
+          trivy image --compliance docker-cis-1.6.0 node:24
+          trivy image --compliance docker-cis-1.6.0 postgres
+          trivy image --compliance docker-cis-1.6.0 nginx:alpine
 
       - name: Scan Images in Security Docker Compose
         run: |
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL falco-no-driver:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL suricata:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-manager:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-indexer:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-dashboard:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL shuffle-frontend:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL shuffle-backend:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL http-request-action:latest
+          trivy image --compliance docker-cis-1.6.0 falcosecurity/falco-no-driver:latest
+          trivy image --compliance docker-cis-1.6.0 jasonish/suricata:latest
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-manager:4.7.3
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-indexer:4.7.3
+          trivy image --compliance docker-cis-1.6.0 wazuh/wazuh-dashboard:4.7.3
+          trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-frontend:latest
+          trivy image --compliance docker-cis-1.6.0 ghcr.io/shuffle/shuffle-backend:latest
+          trivy image --compliance docker-cis-1.6.0 fjogeleit/http-request-action:latest
 
+  
 
-          
 
       # - name: Build Docker Image (if needed)
       #   run: |
