@@ -53,14 +53,14 @@ jobs:
 
       - name: Scan Images in Security Docker Compose
         run: |
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL falcosecurity/falco-no-driver:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL jasonish/suricata:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-manager:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-indexer:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-dashboard:4.7.3
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL ghcr.io/shuffle/shuffle-frontend:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL ghcr.io/shuffle/shuffle-backend:latest
-          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL fjogeleit/http-request-action:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL falco-no-driver:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL suricata:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-manager:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-indexer:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh-dashboard:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL shuffle-frontend:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL shuffle-backend:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL http-request-action:latest
 
 
           
