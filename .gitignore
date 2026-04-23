@@ -1,4 +1,3 @@
-.env
 database/pgdata/
 node_modules/
 *.log
