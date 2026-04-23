@@ -42,12 +42,6 @@ jobs:
           timeout 60 bash -c 'until curl -sf http://localhost/api > /dev/null 2>&1; do sleep 3; done' || true
           echo "✅ API joignable"
 
-      - name: Test Traefik répond sur :80
-        run: |
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/)
-          echo "Frontend HTTP status: $STATUS"
-          [[ "$STATUS" =~ ^(200|304|301|302)$ ]] || (echo "❌ Frontend KO ($STATUS)" && exit 1)
-
       - name: Test Frontend (web → :8080 via Traefik)
         run: |
           STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/)
