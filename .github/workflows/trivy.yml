@@ -2,9 +2,9 @@ name: Trivy Scan (Docker Compose + Images)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   pull_request:
-    branches: ["main"]
+    branches: ["main","pipeline"]
   schedule:
     - cron: '44 3 * * 3'  # Tous les mercredis à 3h44
 
