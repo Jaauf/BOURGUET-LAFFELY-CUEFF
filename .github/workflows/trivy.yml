@@ -51,20 +51,20 @@ jobs:
 
       - name: Scan Images in Applicatif Docker Compose
         run: |
-          trivy image --compliance docker-cis-1.8.0 node:24
-          trivy image --compliance docker-cis-1.8.0 postgres
-          trivy image --compliance docker-cis-1.8.0 nginx:alpine
+          trivy image --compliance docker-cis-1.7.0 node:24
+          trivy image --compliance docker-cis-1.7.0 postgres
+          trivy image --compliance docker-cis-1.7.0 nginx:alpine
 
       - name: Scan Images in Security Docker Compose
         run: |
-          trivy image --compliance docker-cis-1.8.0 falcosecurity/falco-no-driver:latest
-          trivy image --compliance docker-cis-1.8.0 jasonish/suricata:latest
-          trivy image --compliance docker-cis-1.8.0 wazuh/wazuh-manager:4.7.3
-          trivy image --compliance docker-cis-1.8.0 wazuh/wazuh-indexer:4.7.3
-          trivy image --compliance docker-cis-1.8.0 wazuh/wazuh-dashboard:4.7.3
-          trivy image --compliance docker-cis-1.8.0 ghcr.io/shuffle/shuffle-frontend:latest
-          trivy image --compliance docker-cis-1.8.0 ghcr.io/shuffle/shuffle-backend:latest
-          # trivy image --compliance docker-cis-1.8.0 fjogeleit/http-request-action:latest
+          trivy image --compliance docker-cis-1.7.0 falcosecurity/falco-no-driver:latest
+          trivy image --compliance docker-cis-1.7.0 jasonish/suricata:latest
+          trivy image --compliance docker-cis-1.7.0 wazuh/wazuh-manager:4.7.3
+          trivy image --compliance docker-cis-1.7.0 wazuh/wazuh-indexer:4.7.3
+          trivy image --compliance docker-cis-1.7.0 wazuh/wazuh-dashboard:4.7.3
+          trivy image --compliance docker-cis-1.7.0 ghcr.io/shuffle/shuffle-frontend:latest
+          trivy image --compliance docker-cis-1.7.0 ghcr.io/shuffle/shuffle-backend:latest
+          # trivy image --compliance docker-cis-1.7.0 fjogeleit/http-request-action:latest
 
   
 
