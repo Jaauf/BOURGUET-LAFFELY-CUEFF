@@ -34,20 +34,40 @@ jobs:
           trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL compose.yml
 
 
-      - name: Scan Docker Compose Configuration
+      - name: Scan Docker Compose Applicatif Configuration
         run: |
           # Scanner tous les fichiers YAML du répertoire
           trivy config --exit-code 1 --severity MEDIUM,HIGH,CRITICAL --format table .
 
-      - name: Scan Images in Docker Compose
+      - name: Scan Security Docker Compose Configuration
+        run: |
+          # Scanner tous les fichiers YAML du répertoire
+          trivy security/docker-compose.security --exit-code 1 --severity MEDIUM,HIGH,CRITICAL --format table .
+
+
+      - name: Scan Images in Applicatif Docker Compose
         run: |
           trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL node:24
           trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL postgres
           trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL nginx:alpine
 
-      - name: Build Docker Image (if needed)
+      - name: Scan Images in Security Docker Compose
         run: |
-          docker compose -f compose.yml build
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL falcosecurity/falco-no-driver:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL jasonish/suricata:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-manager:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-indexer:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL wazuh/wazuh-dashboard:4.7.3
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL ghcr.io/shuffle/shuffle-frontend:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL ghcr.io/shuffle/shuffle-backend:latest
+          trivy image --exit-code 1 --severity MEDIUM,HIGH,CRITICAL fjogeleit/http-request-action:latest
+
+
+          
+
+      # - name: Build Docker Image (if needed)
+      #   run: |
+      #     docker compose -f compose.yml build
 
       # - name: Scan Built Images with Trivy
       #   uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
