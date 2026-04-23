@@ -53,7 +53,7 @@ jobs:
         run: |
           trivy image --compliance docker-cis-1.6.0 node:24
           trivy image --compliance docker-cis-1.6.0 postgres
-          trivy image -compliance docker-cis-1.6.0 nginx:alpine
+          trivy image --compliance docker-cis-1.6.0 nginx:alpine
 
       - name: Scan Images in Security Docker Compose
         run: |
