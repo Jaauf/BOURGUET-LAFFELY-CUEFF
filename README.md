@@ -175,5 +175,7 @@ Utilisation de la version 1.6.0 avec trivy car les versions plus récente ne son
 ![copy-left](preuve-copyleft-fort.png)
 
 
+![copy-left](trivy-scanning-misconfiguration.png)
+
 ![dependency bot](preuve-Dependency-bot-.png)
 
